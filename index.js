@@ -7,7 +7,7 @@ const options = require("./utils/paramsCLI");
 const rutasFacturas = require("./routes/facturas");
 const {
   serverError, notFoundError, generalError
-} = require("./utils/errores");
+} = require("./utils/errors");
 
 const app = express();
 
@@ -27,3 +27,7 @@ app.get("/", (req, res, next) => {
 });
 app.use(notFoundError);
 app.use(generalError);
+
+
+
+

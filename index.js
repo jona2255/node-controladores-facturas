@@ -8,6 +8,7 @@ const rutasFacturas = require("./routes/facturas");
 const {
   serverError, notFoundError, generalError
 } = require("./utils/errors");
+const cors = require("cors");
 
 const app = express();
 
@@ -19,6 +20,7 @@ const server = app.listen(puerto, () => {
 
 server.on("error", err => serverError(err, puerto));
 
+app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json());
 app.use("/facturas", rutasFacturas);

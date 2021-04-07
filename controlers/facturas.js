@@ -3,7 +3,7 @@ const facturasJSON = require("../utils/datosAPI");
 
 const getFacturas = () => facturasJSON;
 const getFactura = id => {
-  const factura = facturasJSON.find(factura => factura.id === id);
+  const factura = facturasJSON.then(factura => factura.find(factura => factura.id === id));
   const respuesta = {
     factura: null,
     error: null

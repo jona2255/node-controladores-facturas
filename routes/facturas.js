@@ -1,8 +1,8 @@
 const express = require("express");
-const { checkSchema, check, validationResult } = require("express-validator");
+const { checkSchema, check } = require("express-validator");
 const { generaError, badRequestError, idNoExisteError } = require("../utils/errors");
 const {
-  getFacturas, getFactura, getFacturasIngresos, getFacturasGastos, crearFactura, borrarFactura, modificarFactura, sustituirFactura
+  getFacturas, getFactura, crearFactura, borrarFactura, modificarFactura, sustituirFactura
 } = require("../controlers/facturas");
 const facturasJSON = require("../facturas.json");
 const router = express.Router();
@@ -24,14 +24,14 @@ const getFacturaSchema = () => {
     notEmpty: true
   };
   const vencimiento = {
-    errorMessage: "DEbes poner una fecha de vencimiento en formato Timestamp",
+    errorMessage: "Debes poner una fecha de vencimiento en formato Timestamp",
   };
   const concepto = {
     errorMessage: "Falta el concepto de la factura",
   };
   const base = {
     isFloat: {
-      errorMessage: "La nota debe ser mayor a 0",
+      errorMessage: "La base imponible debe ser mayor a 0",
       notEmpty: true,
       options: {
         min: 0
@@ -39,7 +39,7 @@ const getFacturaSchema = () => {
     }
   };
   const tipoIva = {
-    isInt: {
+    isInteger: {
       errorMessage: "El tipo del iva tiene que ser un entero",
       notEmpty: true
     }
@@ -65,15 +65,18 @@ const getFacturaSchema = () => {
 };
 
 router.get("/", (req, res, next) => {
-  const listaFacturas = getFacturas();
+  const queryParams = req.query;
+  const listaFacturas = getFacturas(queryParams);
   res.json(estructuraFacturas(listaFacturas));
 });
 router.get("/ingresos", (req, res, next) => {
-  const listaFacturas = getFacturasIngresos();
+  const queryParams = req.query;
+  const listaFacturas = getFacturas(queryParams, "ingreso");
   res.json(estructuraFacturas(listaFacturas));
 });
 router.get("/gastos", (req, res, next) => {
-  const listaFacturas = getFacturasGastos();
+  const queryParams = req.query;
+  const listaFacturas = getFacturas(queryParams, "gasto");
   res.json(estructuraFacturas(listaFacturas));
 });
 router.get("/factura/:idFactura", (req, res, next) => {

@@ -1,12 +1,61 @@
 const { generaError } = require("../utils/errors");
-let facturasJSON = require("../facturas.json");
+let facturasJSON = require("../facturas.json").facturas;
 
-const getFacturas = () => facturasJSON.facturas;
-const getFacturasIngresos = () => facturasJSON.facturas.filter(factura => factura.tipo === "ingreso");
-const getFacturasGastos = () => facturasJSON.facturas.filter(factura => factura.tipo === "gasto");
+const getFacturas = (queryParams, tipo) => {
+  let facturas;
+  if (tipo) {
+    facturas = facturasJSON.filter(factura => factura.tipo === tipo);
+  } else {
+    facturas = facturasJSON;
+  }
+  console.log(facturas);
+  if (queryParams.abonadas) {
+    facturas = facturas.filter(factura => {
+      if (queryParams.abonadas === factura.abonada.toString()) {
+        return factura;
+      }
+    });
+  }
+  if (queryParams.vencidas) {
+    facturas = facturas.filter(factura => {
+      if (queryParams.vencidas) {
+        if (queryParams.vencidas === "true") {
+          return +factura.vencimiento < new Date().getTime();
+        } else {
+          return +factura.vencimiento > new Date().getTime();
+        }
+      } else {
+        return factura;
+      }
+    });
+  }
+  if (queryParams.ordenPor) {
+    if (!queryParams.orden || queryParams.orden === "asc" || queryParams.ordenPor === "") {
+      if (queryParams.ordenPor === "fecha") {
+        facturas.sort((a, b) => (a.fecha > b.fecha) ? 1 : -1);
+      } else if (queryParams.ordenPor === "base") {
+        facturas.sort((a, b) => (a.base > b.base) ? 1 : -1);
+      }
+    } else if (queryParams.orden === "desc") {
+      if (queryParams.ordenPor === "fecha") {
+        facturas.sort((a, b) => (a.fecha < b.fecha) ? 1 : -1);
+      } else if (queryParams.ordenPor === "base") {
+        facturas.sort((a, b) => (a.base < b.base) ? 1 : -1);
+      }
+    }
+  }
+  if (queryParams.nPorPagina) {
+    if (queryParams.pagina) {
+      return facturas.slice(+queryParams.pagina * +queryParams.nPorPagina, (+queryParams.pagina + 1) * +queryParams.nPorPagina);
+    } else {
+      return facturas.slice(0, +queryParams.nPorPagina);
+    }
+  }
+  return facturas;
+};
 
 const getFactura = id => {
-  const factura = facturasJSON.facturas.find(factura => factura.id === id);
+  const factura = facturasJSON.find(factura => factura.id === id);
   const respuesta = {
     factura: null,
     error: null
@@ -25,27 +74,27 @@ const crearFactura = nuevaFactura => {
     factura: null,
     error: null
   };
-  if (facturasJSON.facturas.find(factura => +factura.numero === +nuevaFactura.numero)) {
+  if (facturasJSON.find(factura => +factura.numero === +nuevaFactura.numero)) {
     const error = generaError("Ya existe la factura", 409);
     respuesta.error = error;
   }
   if (!respuesta.error) {
-    nuevaFactura.id = facturasJSON.facturas[facturasJSON.facturas.length - 1].id + 1;
-    facturasJSON.facturas.push(nuevaFactura);
+    nuevaFactura.id = facturasJSON[facturasJSON.length - 1].id + 1;
+    facturasJSON.push(nuevaFactura);
     respuesta.factura = nuevaFactura;
   }
   return respuesta;
 };
 
 const sustituirFactura = (idFactura, facturaModificado) => {
-  const factura = facturasJSON.facturas.find(factura => factura.id === idFactura);
+  const factura = facturasJSON.find(factura => factura.id === idFactura);
   const respuesta = {
     factura: null,
     error: null
   };
   if (factura) {
     facturaModificado.id = factura.id;
-    facturasJSON.facturas[facturasJSON.facturas.indexOf(factura)] = facturaModificado;
+    facturasJSON[facturasJSON.indexOf(factura)] = facturaModificado;
     respuesta.factura = facturaModificado;
   } else {
     const { error, factura } = crearFactura(facturaModificado);
@@ -59,7 +108,8 @@ const sustituirFactura = (idFactura, facturaModificado) => {
 };
 
 const modificarFactura = (idFactura, cambios) => {
-  const factura = facturasJSON.facturas.find(factura => factura.id === idFactura);
+
+  const factura = facturasJSON.find(factura => factura.idFactura === idFactura);
   const respuesta = {
     factura: null,
     error: null
@@ -68,8 +118,10 @@ const modificarFactura = (idFactura, cambios) => {
     ...factura,
     ...cambios
   };
-  facturasJSON.facturas[facturasJSON.facturas.indexOf(factura)] = facturaModificado;
+  facturasJSON[facturasJSON.indexOf(factura)] = facturaModificado;
   respuesta.factura = facturaModificado;
+  console.log(respuesta);
+
   return respuesta;
 };
 
@@ -78,8 +130,8 @@ const borrarFactura = idFactura => {
     factura: null,
     error: null
   };
-  const factura = facturasJSON.facturas.find(factura => factura.id === idFactura);
-  facturasJSON.facturas = facturasJSON.facturas.filter(factura => factura.id !== idFactura);
+  const factura = facturasJSON.find(factura => factura.id === idFactura);
+  facturasJSON = facturasJSON.filter(factura => factura.id !== idFactura);
   respuesta.factura = factura;
   return respuesta;
 };
@@ -88,8 +140,6 @@ const borrarFactura = idFactura => {
 module.exports = {
   getFacturas,
   getFactura,
-  getFacturasIngresos,
-  getFacturasGastos,
   crearFactura,
   sustituirFactura,
   modificarFactura,

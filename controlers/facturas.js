@@ -1,5 +1,5 @@
 const { generaError } = require("../utils/errors");
-const facturasJSON = require("../facturas.json");
+let facturasJSON = require("../facturas.json");
 
 const getFacturas = () => facturasJSON.facturas;
 const getFacturasIngresos = () => facturasJSON.facturas.filter(factura => factura.tipo === "ingreso");
@@ -37,10 +37,61 @@ const crearFactura = nuevaFactura => {
   return respuesta;
 };
 
+const sustituirFactura = (idFactura, facturaModificado) => {
+  const factura = facturasJSON.facturas.find(factura => factura.id === idFactura);
+  const respuesta = {
+    factura: null,
+    error: null
+  };
+  if (factura) {
+    facturaModificado.id = factura.id;
+    facturasJSON.facturas[facturasJSON.facturas.indexOf(factura)] = facturaModificado;
+    respuesta.factura = facturaModificado;
+  } else {
+    const { error, factura } = crearFactura(facturaModificado);
+    if (error) {
+      respuesta.error = error;
+    } else {
+      respuesta.factura = factura;
+    }
+  }
+  return respuesta;
+};
+
+const modificarFactura = (idFactura, cambios) => {
+  const factura = facturasJSON.facturas.find(factura => factura.id === idFactura);
+  const respuesta = {
+    factura: null,
+    error: null
+  };
+  const facturaModificado = {
+    ...factura,
+    ...cambios
+  };
+  facturasJSON.facturas[facturasJSON.facturas.indexOf(factura)] = facturaModificado;
+  respuesta.factura = facturaModificado;
+  return respuesta;
+};
+
+const borrarFactura = idFactura => {
+  const respuesta = {
+    factura: null,
+    error: null
+  };
+  const factura = facturasJSON.facturas.find(factura => factura.id === idFactura);
+  facturasJSON.facturas = facturasJSON.facturas.filter(factura => factura.id !== idFactura);
+  respuesta.factura = factura;
+  return respuesta;
+};
+
+
 module.exports = {
   getFacturas,
   getFactura,
   getFacturasIngresos,
   getFacturasGastos,
-  crearFactura
+  crearFactura,
+  sustituirFactura,
+  modificarFactura,
+  borrarFactura
 };

@@ -1,9 +1,13 @@
 const express = require("express");
 const { checkSchema, check, validationResult } = require("express-validator");
-const { badRequestError } = require("../utils/errors");
-const { getFacturas, getFactura, getFacturasIngresos, getFacturasGastos, crearFactura } = require("../controlers/facturas");
-
+const { generaError, badRequestError, idNoExisteError } = require("../utils/errors");
+const {
+  getFacturas, getFactura, getFacturasIngresos, getFacturasGastos, crearFactura, borrarFactura, modificarFactura, sustituirFactura
+} = require("../controlers/facturas");
+const facturasJSON = require("../facturas.json");
 const router = express.Router();
+
+const compruebaId = idFactura => facturasJSON.find(factura => factura.id === +idFactura);
 
 const estructuraFacturas = facturas => ({
   total: facturas.length,
@@ -12,45 +16,41 @@ const estructuraFacturas = facturas => ({
 
 const getFacturaSchema = () => {
   const numero = {
-    isLength: {
-      errorMessage: "El número tiene que tener 4 caracteres como mínimo",
-      options: {
-        min: 4
-      }
-    }
+    errorMessage: "Debes poner un número",
+    notEmpty: true
   };
   const fecha = {
     errorMessage: "Falta La fecha de la factura",
+    notEmpty: true
   };
   const vencimiento = {
-    errorMessage: "Falta La fecha de la factura",
-    isEmpty: true
+    errorMessage: "DEbes poner una fecha de vencimiento en formato Timestamp",
   };
   const concepto = {
-    errorMessage: "Falta La fecha de la factura",
-    isEmpty: true
+    errorMessage: "Falta el concepto de la factura",
   };
   const base = {
     isFloat: {
       errorMessage: "La nota debe ser mayor a 0",
+      notEmpty: true,
       options: {
         min: 0
-      }
+      },
     }
   };
   const tipoIva = {
-    isInteger: {
-      errorMessage: "El nombre tiene que tener 2 caracteres como mínimo",
-      options: {
-        min: 2
-      }
+    isInt: {
+      errorMessage: "El tipo del iva tiene que ser un entero",
+      notEmpty: true
     }
   };
   const tipo = {
     errorMessage: "Falta el tipo de la factura",
+    notEmpty: true
   };
   const abonada = {
     errorMessage: "Se debe de poner si la factura está abonada o no",
+    notEmpty: true
   };
   return {
     numero,
@@ -66,7 +66,6 @@ const getFacturaSchema = () => {
 
 router.get("/", (req, res, next) => {
   const listaFacturas = getFacturas();
-  console.log(listaFacturas);
   res.json(estructuraFacturas(listaFacturas));
 });
 router.get("/ingresos", (req, res, next) => {
@@ -86,15 +85,17 @@ router.get("/factura/:idFactura", (req, res, next) => {
     res.json(factura);
   }
 });
-
+const comprobarTipoFactura = tipo => tipo !== "ingreso" && tipo !== "gasto";
 router.post("/factura",
-  checkSchema(getFacturaSchema),
+  checkSchema(getFacturaSchema()),
   (req, res, next) => {
     const error400 = badRequestError(req);
+    const nuevaFactura = req.body;
     if (error400) {
       return next(error400);
+    } else if (comprobarTipoFactura(nuevaFactura.tipo)) {
+      return next(generaError("El tipo debe ser 'ingreso' o 'gasto'", 400));
     }
-    const nuevaFactura = req.body;
     const { factura, error } = crearFactura(nuevaFactura);
     if (error) {
       next(error);
@@ -103,5 +104,63 @@ router.post("/factura",
     }
   });
 
+router.put("/factura/:idFactura",
+  checkSchema(getFacturaSchema()),
+  (req, res, next) => {
+    const error400 = badRequestError(req);
+    const idFactura = +req.params.idFactura;
+    const facturaModificado = req.body;
+    if (error400) {
+      return next(error400);
+    } else if (comprobarTipoFactura(facturaModificado.tipo)) {
+      return next(generaError("El tipo debe ser 'ingreso' o 'gasto'", 400));
+    }
+    const { error, factura } = sustituirFactura(idFactura, facturaModificado);
+    if (error) {
+      next(error);
+    } else {
+      res.json(factura);
+    }
+  });
 
+
+router.patch("/factura/:idFactura",
+  checkSchema(getFacturaSchema()),
+  check("idFactura", "No existe el factura").custom(compruebaId),
+  (req, res, next) => {
+    const error400 = badRequestError(req);
+    if (error400) {
+      return next(error400);
+    }
+    const errorIdNoExiste = idNoExisteError(req);
+    const idFactura = +req.params.idFactura;
+    const facturaModificado = req.body;
+    if (errorIdNoExiste) {
+      return next(errorIdNoExiste);
+    } else if (comprobarTipoFactura(facturaModificado.tipo)) {
+      return next(generaError("El tipo debe ser 'ingreso' o 'gasto'", 400));
+    }
+    const { error, factura } = modificarFactura(idFactura, facturaModificado);
+    if (error) {
+      next(error);
+    } else {
+      res.json(factura);
+    }
+  });
+
+router.delete("/factura/:idFactura",
+  check("idFactura", "No existe la factura").custom(compruebaId),
+  (req, res, next) => {
+    const errorIdNoExiste = idNoExisteError(req);
+    if (errorIdNoExiste) {
+      return next(errorIdNoExiste);
+    }
+    const idFactura = +req.params.idFactura;
+    const { error, factura } = borrarFactura(idFactura);
+    if (error) {
+      next(error);
+    } else {
+      res.json(factura);
+    }
+  });
 module.exports = router;

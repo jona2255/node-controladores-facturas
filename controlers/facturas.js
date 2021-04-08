@@ -2,6 +2,9 @@ const { generaError } = require("../utils/errors");
 const facturasJSON = require("../utils/datosAPI");
 
 const getFacturas = () => facturasJSON;
+const getFacturasIngresos = () => facturasJSON.then(factura => factura.filter(factura => factura.tipo === "ingreso"));
+const getFacturasGastos = () => facturasJSON.then(factura => factura.filter(factura => factura.tipo === "gasto"));
+
 const getFactura = id => {
   const factura = facturasJSON.then(factura => factura.find(factura => factura.id === id));
   const respuesta = {
@@ -19,5 +22,7 @@ const getFactura = id => {
 
 module.exports = {
   getFacturas,
-  getFactura
+  getFactura,
+  getFacturasIngresos,
+  getFacturasGastos
 };

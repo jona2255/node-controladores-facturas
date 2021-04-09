@@ -173,24 +173,22 @@ const sustituirFactura = async (idFactura, facturaModificada) => {
   } else {
     respuesta.error = errorBadOrigin;
   }
-
   return respuesta;
 };
 
 const modificarFactura = async (idFactura, cambios) => {
-
   const respuesta = {
     factura: null,
     error: null
   };
   if (options.datos.toLowerCase() === "json") {
-    const factura = facturasJSON.find(factura => factura.idFactura === idFactura);
-    const facturaModificado = {
+    const factura = facturasJSON.find(factura => factura.id === idFactura);
+    const facturaModificada = {
       ...factura,
       ...cambios
     };
-    facturasJSON[facturasJSON.indexOf(factura)] = facturaModificado;
-    respuesta.factura = facturaModificado;
+    facturasJSON[facturasJSON.indexOf(factura)] = facturaModificada;
+    respuesta.factura = facturaModificada;
   } else if (options.datos.toLowerCase() === "mysql") {
     const factura = await Factura.findByPk(idFactura);
     const facturaModificada = {

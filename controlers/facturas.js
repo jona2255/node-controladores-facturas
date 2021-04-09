@@ -3,6 +3,8 @@ const options = require("../utils/paramsCLI");
 let facturasJSON = require("../facturas.json").facturas;
 const Factura = require("../db/models/factura");
 
+const errorBadOrigin = generaError("El origen debe ser 'JSON' o 'MySQL'", 400);
+const errorNotFound = generaError("La factura solicitado no existe", 404);
 
 const getFacturas = async (queryParams, tipo) => {
   let facturas;
@@ -25,7 +27,7 @@ const getFacturas = async (queryParams, tipo) => {
       facturas = Factura.findAll();
     }
   } else {
-    return generaError("El origen debe ser 'JSON' o 'MySQL'", 400);
+    return errorBadOrigin;
   }
 
   if (queryParams.abonadas) {
@@ -75,22 +77,23 @@ const getFacturas = async (queryParams, tipo) => {
 
 const getFactura = async id => {
   let factura;
+  const respuesta = {
+    factura: null,
+    error: null
+  };
   if (options.datos.toLowerCase() === "json") {
     factura = facturasJSON.find(factura => factura.id === id);
   } else if (options.datos.toLowerCase() === "mysql") {
     factura = await Factura.findByPk(id);
   } else {
-    return generaError("El origen debe ser 'JSON' o 'MySQL'", 400);
+    respuesta.error = errorBadOrigin;
+    return respuesta;
   }
-  const respuesta = {
-    factura: null,
-    error: null
-  };
+
   if (factura) {
     respuesta.factura = factura;
   } else {
-    const error = generaError("La factura solicitado no existe", 404);
-    respuesta.error = error;
+    respuesta.error = errorNotFound;
   }
   return respuesta;
 };
@@ -118,78 +121,113 @@ const crearFactura = async nuevaFactura => {
       }
     });
     if (facturaExistente) {
-      const error = generaError("Ya existe el alumno", 409);
       respuesta.error = error;
     } else {
       const nuevaFacturaBD = await Factura.create(nuevaFactura);
       respuesta.factura = nuevaFacturaBD;
     }
   } else {
-    return generaError("El origen debe ser 'JSON' o 'MySQL'", 400);
+    respuesta.error = errorBadOrigin;
   }
 
   return respuesta;
 };
 
-const sustituirFactura = async (idFactura, facturaModificado) => {
+const sustituirFactura = async (idFactura, facturaModificada) => {
   const respuesta = {
     factura: null,
     error: null
   };
-  const errores = () => {
-
-  };
   if (options.datos.toLowerCase() === "json") {
-
-  } else if (options.datos.toLowerCase() === "mysql") {
-
-  } else {
-    return generaError("El origen debe ser 'JSON' o 'MySQL'", 400);
-  }
-  const factura = facturasJSON.find(factura => factura.id === idFactura);
-  if (factura) {
-    facturaModificado.id = factura.id;
-    facturasJSON[facturasJSON.indexOf(factura)] = facturaModificado;
-    respuesta.factura = facturaModificado;
-  } else {
-    const { error, factura } = crearFactura(facturaModificado);
-    if (error) {
-      respuesta.error = error;
+    const factura = facturasJSON.find(factura => factura.id === idFactura);
+    if (factura) {
+      facturaModificada.id = factura.id;
+      facturasJSON[facturasJSON.indexOf(factura)] = facturaModificada;
+      respuesta.factura = facturaModificada;
     } else {
-      respuesta.factura = factura;
+      const { error, factura } = crearFactura(facturaModificada);
+      if (error) {
+        respuesta.error = error;
+      } else {
+        respuesta.factura = factura;
+      }
     }
+  } else if (options.datos.toLowerCase() === "mysql") {
+    const facturaEncontrada = await Factura.findByPk(idFactura);
+    if (facturaEncontrada) {
+      await Factura.update(facturaModificada, {
+        where: {
+          id: idFactura
+        }
+      });
+      const facturaModificadaDB = await Factura.findByPk(idFactura);
+      respuesta.factura = facturaModificadaDB;
+    } else {
+      const { error, factura } = await crearFactura(facturaModificada);
+      if (error) {
+        respuesta.error = error;
+      } else {
+        respuesta.factura = factura;
+      }
+    }
+  } else {
+    respuesta.error = errorBadOrigin;
   }
+
   return respuesta;
 };
 
 const modificarFactura = async (idFactura, cambios) => {
 
-  const factura = facturasJSON.find(factura => factura.idFactura === idFactura);
   const respuesta = {
     factura: null,
     error: null
   };
-  const facturaModificado = {
-    ...factura,
-    ...cambios
-  };
-  facturasJSON[facturasJSON.indexOf(factura)] = facturaModificado;
-  respuesta.factura = facturaModificado;
-
+  if (options.datos.toLowerCase() === "json") {
+    const factura = facturasJSON.find(factura => factura.idFactura === idFactura);
+    const facturaModificado = {
+      ...factura,
+      ...cambios
+    };
+    facturasJSON[facturasJSON.indexOf(factura)] = facturaModificado;
+    respuesta.factura = facturaModificado;
+  } else if (options.datos.toLowerCase() === "mysql") {
+    const factura = await Factura.findByPk(idFactura);
+    const facturaModificada = {
+      ...factura,
+      ...cambios
+    };
+    await Factura.update(facturaModificada, {
+      where: {
+        id: idFactura
+      }
+    });
+    const facturaModificadaDB = await Factura.findByPk(idFactura);
+    respuesta.factura = facturaModificadaDB;
+  } else {
+    respuesta.error = errorBadOrigin;
+  }
   return respuesta;
 };
 
-const borrarFactura = idFactura => {
+const borrarFactura = async idFactura => {
   const respuesta = {
     factura: null,
     error: null
   };
-  const factura = facturasJSON.find(factura => factura.id === idFactura);
-  facturasJSON = facturasJSON.filter(factura => factura.id !== idFactura);
-  respuesta.factura = factura;
+  if (options.datos.toLowerCase() === "json") {
+    const factura = facturasJSON.find(factura => factura.id === idFactura);
+    facturasJSON = facturasJSON.filter(factura => factura.id !== idFactura);
+    respuesta.factura = factura;
+  } else if (options.datos.toLowerCase() === "mysql") {
+    const facturaEncontrada = await Factura.findByPk(idFactura);
+    await facturaEncontrada.destroy();
+    respuesta.factura = facturaEncontrada;
+  } else {
+    respuesta.error = errorBadOrigin;
+  }
   return respuesta;
 };
-
 
 module.exports = {
   getFacturas,

@@ -67,16 +67,19 @@ const getFacturaSchema = () => {
 router.get("/", async (req, res, next) => {
   const queryParams = req.query;
   const listaFacturas = await getFacturas(queryParams);
+  listaFacturas.codigo === 400 && next(listaFacturas);
   res.json(estructuraFacturas(listaFacturas));
 });
 router.get("/ingresos", async (req, res, next) => {
   const queryParams = req.query;
   const listaFacturas = await getFacturas(queryParams, "ingreso");
+  listaFacturas.codigo === 400 && next(listaFacturas);
   res.json(estructuraFacturas(listaFacturas));
 });
 router.get("/gastos", async (req, res, next) => {
   const queryParams = req.query;
   const listaFacturas = await getFacturas(queryParams, "gasto");
+  listaFacturas.codigo === 400 && next(listaFacturas);
   res.json(estructuraFacturas(listaFacturas));
 });
 router.get("/factura/:idFactura", async (req, res, next) => {

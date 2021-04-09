@@ -39,7 +39,7 @@ const getFacturaSchema = () => {
     }
   };
   const tipoIva = {
-    isInteger: {
+    isInt: {
       errorMessage: "El tipo del iva tiene que ser un entero",
       notEmpty: true
     }
@@ -64,24 +64,24 @@ const getFacturaSchema = () => {
   };
 };
 
-router.get("/", (req, res, next) => {
+router.get("/", async (req, res, next) => {
   const queryParams = req.query;
-  const listaFacturas = getFacturas(queryParams);
+  const listaFacturas = await getFacturas(queryParams);
   res.json(estructuraFacturas(listaFacturas));
 });
-router.get("/ingresos", (req, res, next) => {
+router.get("/ingresos", async (req, res, next) => {
   const queryParams = req.query;
-  const listaFacturas = getFacturas(queryParams, "ingreso");
+  const listaFacturas = await getFacturas(queryParams, "ingreso");
   res.json(estructuraFacturas(listaFacturas));
 });
-router.get("/gastos", (req, res, next) => {
+router.get("/gastos", async (req, res, next) => {
   const queryParams = req.query;
-  const listaFacturas = getFacturas(queryParams, "gasto");
+  const listaFacturas = await getFacturas(queryParams, "gasto");
   res.json(estructuraFacturas(listaFacturas));
 });
-router.get("/factura/:idFactura", (req, res, next) => {
+router.get("/factura/:idFactura", async (req, res, next) => {
   const idFactura = + req.params.idFactura;
-  const { factura, error } = getFactura(idFactura);
+  const { factura, error } = await getFactura(idFactura);
   if (error) {
     next(error);
   } else {

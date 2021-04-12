@@ -14,64 +14,106 @@ const getFacturas = async (queryParams, tipo) => {
     } else {
       facturas = facturasJSON;
     }
-  } else if (options.datos.toLowerCase() === "mysql") {
-    if (tipo) {
-      facturas = await Factura.findAll(
-        {
-          where: {
-            tipo: tipo
-          }
+
+
+
+    if (queryParams.abonadas) {
+      facturas = facturas.filter(factura => {
+        if (queryParams.abonadas === factura.abonada.toString()) {
+          return factura;
         }
-      );
-    } else {
-      facturas = Factura.findAll();
+      });
     }
+    if (queryParams.vencidas) {
+      facturas = facturas.filter(factura => {
+        if (queryParams.vencidas) {
+          if (queryParams.vencidas === "true") {
+            return +factura.vencimiento < new Date().getTime();
+          } else {
+            return +factura.vencimiento > new Date().getTime();
+          }
+        } else {
+          return factura;
+        }
+      });
+    }
+    if (queryParams.ordenPor) {
+      if (!queryParams.orden || queryParams.orden === "asc" || queryParams.ordenPor === "") {
+        if (queryParams.ordenPor === "fecha") {
+          facturas.sort((a, b) => (a.fecha > b.fecha) ? 1 : -1);
+        } else if (queryParams.ordenPor === "base") {
+          facturas.sort((a, b) => (a.base > b.base) ? 1 : -1);
+        }
+      } else if (queryParams.orden === "desc") {
+        if (queryParams.ordenPor === "fecha") {
+          facturas.sort((a, b) => (a.fecha < b.fecha) ? 1 : -1);
+        } else if (queryParams.ordenPor === "base") {
+          facturas.sort((a, b) => (a.base < b.base) ? 1 : -1);
+        }
+      }
+    }
+    if (queryParams.nPorPagina) {
+      if (queryParams.pagina) {
+        return facturas.slice(+queryParams.pagina * +queryParams.nPorPagina, (+queryParams.pagina + 1) * +queryParams.nPorPagina);
+      } else {
+        return facturas.slice(0, +queryParams.nPorPagina);
+      }
+    }
+
+  } else if (options.datos.toLowerCase() === "mysql") {
+    const condicion = {
+      where: {}
+    };
+    if (tipo) {
+      condicion.where.tipo = tipo;
+    }
+    if (queryParams.abonadas) {
+      condicion.where.abonada = queryParams.abonadas === "true";
+    }
+
+    if (queryParams.vencidas) {
+      if (queryParams.vencidas) {
+        if (queryParams.vencidas === "true") {
+          condicion.where.abonada = { $gt: new Date().getTime() };
+        } else {
+          condicion.where.abonada = { lt: new Date().getTime() };
+        }
+      }
+    }
+
+    if (queryParams.ordenPor) {
+      if (!queryParams.orden || queryParams.orden === "asc" || queryParams.ordenPor === "") {
+        if (queryParams.ordenPor === "fecha") {
+          condicion.order = ["fecha", "ASC"];
+        } else if (queryParams.ordenPor === "base") {
+          condicion.order = ["base", "ASC"];
+        }
+      } else if (queryParams.orden === "desc") {
+        if (queryParams.ordenPor === "fecha") {
+          condicion.order = ["fecha", "DESC"];
+        } else if (queryParams.ordenPor === "base") {
+          condicion.order = ["base", "DESC"];
+        }
+      }
+    }
+    if (queryParams.nPorPagina) {
+      if (queryParams.pagina) {
+        condicion.limit = (+queryParams.pagina + 1) * +queryParams.nPorPagina;
+        condicion.offset = +queryParams.pagina * +queryParams.nPorPagina;
+      } else {
+        condicion.limit = +queryParams.nPorPagina;
+        condicion.offset = 0;
+      }
+    }
+
+    facturas = await Factura.findAll(condicion);
+
+
   } else {
     return errorBadOrigin;
   }
 
-  if (queryParams.abonadas) {
-    facturas = facturas.filter(factura => {
-      if (queryParams.abonadas === factura.abonada.toString()) {
-        return factura;
-      }
-    });
-  }
-  if (queryParams.vencidas) {
-    facturas = facturas.filter(factura => {
-      if (queryParams.vencidas) {
-        if (queryParams.vencidas === "true") {
-          return +factura.vencimiento < new Date().getTime();
-        } else {
-          return +factura.vencimiento > new Date().getTime();
-        }
-      } else {
-        return factura;
-      }
-    });
-  }
-  if (queryParams.ordenPor) {
-    if (!queryParams.orden || queryParams.orden === "asc" || queryParams.ordenPor === "") {
-      if (queryParams.ordenPor === "fecha") {
-        facturas.sort((a, b) => (a.fecha > b.fecha) ? 1 : -1);
-      } else if (queryParams.ordenPor === "base") {
-        facturas.sort((a, b) => (a.base > b.base) ? 1 : -1);
-      }
-    } else if (queryParams.orden === "desc") {
-      if (queryParams.ordenPor === "fecha") {
-        facturas.sort((a, b) => (a.fecha < b.fecha) ? 1 : -1);
-      } else if (queryParams.ordenPor === "base") {
-        facturas.sort((a, b) => (a.base < b.base) ? 1 : -1);
-      }
-    }
-  }
-  if (queryParams.nPorPagina) {
-    if (queryParams.pagina) {
-      return facturas.slice(+queryParams.pagina * +queryParams.nPorPagina, (+queryParams.pagina + 1) * +queryParams.nPorPagina);
-    } else {
-      return facturas.slice(0, +queryParams.nPorPagina);
-    }
-  }
+
   return facturas;
 };
 
@@ -85,6 +127,7 @@ const getFactura = async id => {
     factura = facturasJSON.find(factura => factura.id === id);
   } else if (options.datos.toLowerCase() === "mysql") {
     factura = await Factura.findByPk(id);
+    Factura.findAll();
   } else {
     respuesta.error = errorBadOrigin;
     return respuesta;

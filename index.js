@@ -5,12 +5,13 @@ const chalk = require("chalk");
 const express = require("express");
 const options = require("./utils/paramsCLI");
 const rutasFacturas = require("./routes/facturas");
+const rutasProyectos = require("./routes/proyectos");
 const {
   serverError, notFoundError, generalError
 } = require("./utils/errors");
 const cors = require("cors");
-
 const app = express();
+require("./db/dbMongo");
 
 const puerto = options.puerto || process.env.PUERTO || 5000;
 
@@ -24,6 +25,7 @@ app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json());
 app.use("/facturas", rutasFacturas);
+app.use("/proyectos", rutasProyectos);
 app.get("/", (req, res, next) => {
   res.redirect("/facturas");
 });

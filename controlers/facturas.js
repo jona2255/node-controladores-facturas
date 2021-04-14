@@ -76,7 +76,7 @@ const getFacturas = async (queryParams, tipo) => {
         if (queryParams.vencidas === "true") {
           condicion.where.abonada = { $gt: new Date().getTime() };
         } else {
-          condicion.where.abonada = { lt: new Date().getTime() };
+          condicion.where.abonada = { $lt: new Date().getTime() };
         }
       }
     }
